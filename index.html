@@ -126,21 +126,21 @@
 				
 				//人物移动+推箱子
 				$(document).keydown(function(e){
-					if (e.keyCode==37) {
+					if (e.keyCode==65) {
 						let p1 = $(".person").parent().prev();
 						let p2 = $(".person").parent().prev().prev();
 						move(p1, p2, "left");
-					}else if(e.keyCode==38){
+					}else if(e.keyCode==87){
 						//取得当前人物在这一行的td的索引
 						let index = $(".person").parent().index();
 						let p1 = $(".person").parent().parent().prev().find("td").eq(index);
 						let p2 = $(".person").parent().parent().prev().prev().find("td").eq(index);
 						move(p1, p2, "up");
-					}else if(e.keyCode==39){
+					}else if(e.keyCode==68){
 						let p1 = $(".person").parent().next();
 						let p2 = $(".person").parent().next().next();
 						move(p1, p2, "right");
-					}else if(e.keyCode==40){
+					}else if(e.keyCode==83){
 						//取得当前人物在这一行的td的索引
 						let index = $(".person").parent().index();
 						let p1 = $(".person").parent().parent().next().find("td").eq(index);
