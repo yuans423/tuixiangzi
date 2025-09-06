@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title></title>
+		<style>
+			td{
+				background-image: url('img/block.gif');
+				height: 35px;
+				width: 35px;
+				cursor: pointer;
+				position: relative;
+			}
+			#d1{
+				text-align: center;
+			}
+			#d2{
+				padding: 5px;
+				border: 3px solid #8f8f8f;
+				margin-left: 5px;
+				width: 60px;
+			}
+			#d2>img {
+			    border: 5px solid white;
+				cursor: pointer;
+			}
+			#d3{
+				display: flex;
+				justify-content: center;
+				margin: 10px 0px;
+			}
+			.active{
+				border: 5px solid red !important;
+			}
+			.wall{
+				position: absolute;
+				left: 0px;
+				top: -12px;
+			}
+			.box{
+				position: absolute;
+				top: -10px;
+				left: 0px;
+			}
+			.ball{
+				position: absolute;
+				left: 3px;
+				top: 2px;
+			}
+			.person{
+				position: absolute;
+				left: -5px;
+				top: -27px;
+				width: 45px;
+			}
+			#d4>input{
+				margin-right: 10px;
+			}
+			.active1{
+				background-color: #03a9f4;
+				color: white;
+				border-color: #03a9f4;
+			}
+		</style>
+		<script src="js/jquery.min.js"></script>
+	</head>
+	<body>
+		<div id="d1">
+			<h1>地图编辑器</h1>
+			<div>
+				宽：<input id="width" value="16" type="number"/>
+				高：<input id="height" value="16" type="number"/>
+				<input type="button" value="生成背景" id="createBg"/>
+				<input type="button" value="新建" id="new"/>
+				<input type="button" value="保存" id="save"/>
+				<input type="button" value="开始游戏" id="start"/>
+			</div>
+			<div id="d3">
+				<div id="map"></div>
+				<div id="d2">
+					<img src="img/wall.png" class="active" data="wall"/>
+					<img src="img/box.png" data="box"/>
+					<img src="img/ball.png" data="ball"/>
+					<img src="img/down.png" data="person"/>
+				</div>
+			</div>
+			<div id="d4"></div>
+		</div>
+		<script>
+			$(function(){
+				let level = -1;		//当前选中关卡
+				
+				//生成背景
+				$("#createBg").click(function(){
+					$("#map").empty();
+					let width = $("#width").val();
+					let height = $("#height").val();
+					
+					let table = $('<table border="0" cellspacing="0" cellpadding="0">');
+					for (var i = 0; i < height; i++) {
+						let tr = $("<tr>");
+						for (var j = 0; j < width; j++) {
+							let td = $("<td>");
+							tr.append(td);
+						}
+						table.append(tr);
+					}
+					
+					$("#map").append(table);
+				})
+				
+				//切换选择的组件 
+				$(document).keydown(function(e){
+					if(e.keyCode==49){
+						$("#d2>img").removeClass("active");
+						$("#d2>img:eq(0)").addClass("active");
+					}else if(e.keyCode==50){
+						$("#d2>img").removeClass("active");
+						$("#d2>img:eq(1)").addClass("active");
+					}else if(e.keyCode==51){
+						$("#d2>img").removeClass("active");
+						$("#d2>img:eq(2)").addClass("active");
+					}else if(e.keyCode==52){
+						$("#d2>img").removeClass("active");
+						$("#d2>img:eq(3)").addClass("active");
+					}
+				})
+				
+				//切换选择的组件 
+				$("#d2>img").click(function(){
+					$("#d2>img").removeClass("active");
+					$(this).addClass("active");
+				})
+				
+				//放置组件
+				$("#map").on('click', 'td', function(){
+					if($(this).children().length!=0){
+						$(this).empty();
+					}else{
+						let img = $(".active").clone();
+						img.addClass(img.attr("data"));
+						img.removeClass("active");
+						$(this).append(img);
+					}
+				})
+				
+				//放置组件
+				$("#map").on('mousemove', 'td', function(e){
+					//判断shift键是否按下
+					if(e.shiftKey){
+						$(this).empty();
+						let img = $(".active").clone();
+						img.addClass(img.attr("data"));
+						img.removeClass("active");
+						$(this).append(img);
+					}
+					if(e.ctrlKey){
+						$(this).empty();
+					}
+				})
+				
+				//保存
+				$("#save").click(function(){
+					let map = [];		//当前地图数组
+					$("tr").each(function(index, tr){
+						let arr = [];	//每一行的数组
+						$(tr).find("td").each(function(index, td){
+							let img = $(td).find("img");
+							console.log(111);
+							if(img.length==0){
+								arr.push(0);
+							}else if(img.attr("src")=="img/wall.png"){
+								arr.push(1);
+							}else if(img.attr("src")=="img/box.png"){
+								arr.push(3);
+							}else if(img.attr("src")=="img/ball.png"){
+								arr.push(2);
+							}else if(img.attr("src")=="img/down.png"){
+								arr.push(4);
+							}
+						})
+						map.push(arr);
+					})
+					
+					//从缓存中取出所有地图数据
+					let maps = localStorage.getItem("maps");
+					if(maps==null){
+						maps = [];
+					}else {
+						maps = JSON.parse(maps);
+					}
+					
+					if (level==-1) {
+						//将当前地图数组保存到地图数组中
+						maps.push(map);
+					}else {
+						maps[level] = map;
+					}
+					
+					//存回浏览器缓存 
+					localStorage.setItem("maps", JSON.stringify(maps));
+					loadLevel();
+					alert("保存成功");
+				})
+				
+				//加载卡关
+				function loadLevel(){
+					$("#d4").empty();
+					let maps = localStorage.getItem("maps");
+					if(maps==null){
+						maps = [];
+					}else {
+						maps = JSON.parse(maps);
+					}
+					
+					for (var i = 0; i < maps.length; i++) {
+						let input = $("<input type='button'>").val("关卡"+(i+1));
+						if(i==level){
+							input.addClass("active1");
+						}
+						input.data("arr", maps[i]);
+						$("#d4").append(input);
+					}
+				}
+				
+				//加载地图
+				$("#d4").on('click', 'input', function(){
+					$("td").empty();
+					$("#d4>input").removeClass("active1");
+					$(this).addClass("active1");
+					level = $(this).index();
+					
+					//从按钮的数据域中取出地图数据
+					let arr = $(this).data("arr");	
+					
+					for (var i = 0; i < arr.length; i++) {
+						for (var j = 0; j < arr[i].length; j++) {
+							if(arr[i][j]==1){
+								let img = $("<img>").addClass("wall").attr("src", "img/wall.png");
+								$("tr:eq("+i+") td:eq("+j+")").append(img);
+							}else if(arr[i][j]==3){
+								let img = $("<img>").addClass("box").attr("src", "img/box.png");
+								$("tr:eq("+i+") td:eq("+j+")").append(img);
+							}else if(arr[i][j]==2){
+								let img = $("<img>").addClass("ball").attr("src", "img/ball.png");
+								$("tr:eq("+i+") td:eq("+j+")").append(img);
+							}else if(arr[i][j]==4){
+								let img = $("<img>").addClass("person").attr("src", "img/down.png");
+								$("tr:eq("+i+") td:eq("+j+")").append(img);
+							}
+						}
+					}
+				})
+				
+				//删除地图
+				$("#d4").on('dblclick', 'input', function(e){
+					if(!e.shiftKey){
+						let name = $(this).val();
+						let rs = confirm("确定要删除"+name+"吗？");
+						if (!rs) {
+							return;
+						}
+					}
+					let maps = localStorage.getItem("maps");
+					if(maps==null){
+						maps = [];
+					}else {
+						maps = JSON.parse(maps);
+					}
+					let index = $(this).index();
+					console.log(111);
+					maps.splice(index,1);//删除
+					
+					localStorage.setItem("maps", JSON.stringify(maps));
+					loadLevel();
+					$("#new").click();
+				})
+				
+				//新建
+				$("#new").click(function(){
+					$("td").empty();
+					level=-1;
+					$("#d4>input").removeClass("active1");
+				})
+				
+				//开始游戏
+				$("#start").click(function(){
+					location.href = "01推箱子.html";
+				})
+				
+				
+				//生成背景地图
+				$("#createBg").click();
+				loadLevel();
+			})
+		</script>
+	</body>
+</html>

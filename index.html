@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+		<style>
+			td{
+				background-image: url('./img/block.gif');
+				height: 35px;
+				width: 35px;
+				cursor: pointer;
+				position: relative;
+			}
+			.wall{
+				position: absolute;
+				left: 0px;
+				top: -12px;
+			}
+			.box{
+				position: absolute;
+				top: -10px;
+				left: 0px;
+			}
+			.ball{
+				position: absolute;
+				left: 3px;
+				top: 2px;
+			}
+			.person{
+				position: absolute;
+				left: -5px;
+				top: -27px;
+				width: 45px;
+			}
+			#d1{
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+			}
+			#d2{
+				margin-top: 10px;
+			}
+		</style>
+		<script src="./js/jquery.min.js"></script>
+		<script src="./js/mapdata100.js"></script>
+	</head>
+	<body>
+		<div id="d1">
+			<h1>推箱子游戏</h1>
+			<div id="map">
+				
+			</div>
+			<div id="d2">
+				第<span id="level"></span>关 
+				<input type="button" value="上一关" id="prev"/>
+				<input type="button" value="下一关" id="next"/>
+				<input type="button" value="重玩本关" id="reload"/>
+				<select id="levelSelect">
+				</select>
+				<input type="button" value="go" id="go"/>
+				<input type="button" value="编辑地图" id="edit"/>
+			</div>
+		</div>
+		<script>
+			$(function(){
+				let level = 0;			//当前关卡
+				let maxLevel = 0;		//最后关卡
+				
+				//加载自定义地图
+				let maps = localStorage.getItem("maps");
+				if(maps==null){
+					maps = [];
+				}else {
+					maps = JSON.parse(maps);
+				}
+				//合并地图
+				for (var i = 0; i < maps.length; i++) {
+					levels.push(maps[i]);
+				}
+				maxLevel = levels.length-1;
+				
+				//加载关卡下拉
+				$("#levelSelect").empty();
+				for (var i = 1; i <= levels.length; i++) {
+					let option = $("<option>").val(i-1).text("关卡"+i);
+					$("#levelSelect").append(option)
+				}
+				
+				//加载地图
+				function loadMap(){
+					$("#map").empty();
+					
+					$("#level").text(parseInt(level)+1);
+					
+					
+					
+					//加载当前地图
+					let table = $('<table border="0" cellspacing="0" cellpadding="0">');
+					let map = levels[level];
+					for (var i = 0; i < map.length; i++) {
+						let tr = $("<tr>");
+						for (var j = 0; j < map[i].length; j++) {
+							let td = $("<td>");
+							tr.append(td);
+							
+							//放置组件
+							if(map[i][j]==1){
+								let img = $("<img>").addClass("wall").attr("src", "img/wall.png");
+								td.append(img);
+							}else if(map[i][j]==3){
+								let img = $("<img>").addClass("box").attr("src", "img/box.png");
+								td.append(img);
+							}else if(map[i][j]==2){
+								let img = $("<img>").addClass("ball").attr("src", "img/ball.png");
+								td.append(img);
+							}else if(map[i][j]==4){
+								let img = $("<img>").addClass("person").attr("src", "img/down.png");
+								td.append(img);
+							}
+						}
+						table.append(tr);
+					}
+					
+					$("#map").append(table);
+				}
+				
+				//人物移动+推箱子
+				$(document).keydown(function(e){
+					if (e.keyCode==37) {
+						let p1 = $(".person").parent().prev();
+						let p2 = $(".person").parent().prev().prev();
+						move(p1, p2, "left");
+					}else if(e.keyCode==38){
+						//取得当前人物在这一行的td的索引
+						let index = $(".person").parent().index();
+						let p1 = $(".person").parent().parent().prev().find("td").eq(index);
+						let p2 = $(".person").parent().parent().prev().prev().find("td").eq(index);
+						move(p1, p2, "up");
+					}else if(e.keyCode==39){
+						let p1 = $(".person").parent().next();
+						let p2 = $(".person").parent().next().next();
+						move(p1, p2, "right");
+					}else if(e.keyCode==40){
+						//取得当前人物在这一行的td的索引
+						let index = $(".person").parent().index();
+						let p1 = $(".person").parent().parent().next().find("td").eq(index);
+						let p2 = $(".person").parent().parent().next().next().find("td").eq(index);
+						move(p1, p2, "down");
+					}
+				})
+				
+				//移动/推箱子
+				function move(p1, p2, direcation){
+					if (p1.children().length==0 || p1.children("img:last").attr("src")=="img/ball.png") {
+						//1.当p1是空草地或小黄珠时，直接将人物移动过去
+						let person = $(".person").clone().attr("src", "img/"+direcation+".png");
+						$(".person").remove();
+						p1.append(person);
+					}else if(p1.children().length>=1 && p1.children("img:last").attr("src")=="img/box.png"
+							&& (p2.children().length==0 || p2.children("img:last").attr("src")=="img/ball.png")){
+						//2.当p1是箱子，p2是空草地或小黄珠时，人物移动，且箱子推进
+						
+						//克隆箱子并删除原来的箱子
+						let box = p1.children("img:last").clone();
+						p1.children("img:last").remove();
+						
+						//克隆人物并删除原来的人物
+						let person = $(".person").clone().attr("src", "img/"+direcation+".png");
+						$(".person").remove();
+						
+						p2.append(box);
+						p1.append(person);
+					}
+					isNext();
+				}
+				
+				//判断是否下一关
+				function isNext(){
+					let rs = true;
+					$(".ball").each(function(i,e){
+						if ($(e).next().length==0){
+							rs = false;
+							return;
+						}else {
+							if (!$(e).next().hasClass("box")) {
+								rs = false;
+								return;
+							}
+						}
+					})
+					
+					if (rs) {
+						if (level!=maxLevel) {
+							alert("恭喜进入下一关");
+							level++;
+							loadMap();
+						}else {
+							alert("恭喜全部通关！！！");
+						}
+					}
+				}
+				
+				//上一关
+				$("#prev").click(function(){
+					if (level!=0) {
+						level-=1;
+						loadMap();
+					}
+				})
+				
+				//下一关
+				$("#next").click(function(){
+					if (level!=maxLevel) {
+						level+=1;
+						loadMap();
+					}
+				})
+				
+				//跳转关卡
+				$("#go").click(function(){
+					level = $("#levelSelect").val();
+					loadMap();
+				})
+				
+				//跳转编辑地图
+				$("#edit").click(function(){
+					location.href = "02地图编辑器.html";
+				})
+				
+				//重玩本关
+				$("#reload").click(function(){
+					loadMap();
+				})
+				
+				loadMap();//加载地图
+			})
+		</script>
+	</body>
+</html>
